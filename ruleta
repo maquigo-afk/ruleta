@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ruleta de vocales</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Schoolbell&display=swap');
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:transparent; font-family:"Schoolbell","Comic Sans MS",cursive;
+  }
+  .app{width:min(92vw,520px); text-align:center; padding:12px}
+  .wheelbox{position:relative; width:min(82vw,390px); aspect-ratio:1; margin:0 auto 18px}
+  canvas{width:100%;height:100%;display:block}
+  .pointer{
+    position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+    width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;
+    border-top:0;border-bottom:34px solid #333; z-index:3;
+    filter:drop-shadow(0 2px 1px #fff);
+  }
+  .hub{
+    position:absolute; left:50%;top:50%; transform:translate(-50%,-50%);
+    width:62px;height:62px;border-radius:50%;background:white;border:5px solid #333;
+    box-shadow:0 2px 4px #999; z-index:2;
+  }
+  button{
+    font-family:"Schoolbell","Comic Sans MS",cursive; font-weight:700;
+    font-size:30px; padding:10px 32px; border:3px solid #333; border-radius:18px;
+    background:#fff; cursor:pointer; box-shadow:0 4px 0 #333;
+  }
+  button:active{transform:translateY(3px);box-shadow:0 1px 0 #333}
+  button:disabled{opacity:.6;cursor:default}
+  #result{
+    min-height:52px; margin-top:18px; font-size:32px; font-weight:700;
+    color:#333;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wheelbox">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="700" height="700"></canvas>
+    <div class="hub"></div>
+  </div>
+  <button id="spin">GIRAR</button>
+  <div id="result">Pulsa GIRAR</div>
+</div>
+
+<script>
+const canvas=document.getElementById("wheel"), ctx=canvas.getContext("2d");
+const spinBtn=document.getElementById("spin"), result=document.getElementById("result");
+const items=["a","e","i","o","u","elige tú"];
+const colors=["#FFD966","#A9D18E","#9DC3E6","#F4B183","#D9A7E8","#F6B5B5"];
+const n=items.length, slice=2*Math.PI/n;
+let rotation=0, spinning=false;
+
+function draw(){
+  const cx=350, cy=350, r=330;
+  ctx.clearRect(0,0,700,700);
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotation);
+  for(let i=0;i<n;i++){
+    const start=-Math.PI/2+i*slice, end=start+slice;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,start,end); ctx.closePath();
+    ctx.fillStyle=colors[i]; ctx.fill(); ctx.lineWidth=7; ctx.strokeStyle="#333"; ctx.stroke();
+
+    ctx.save();
+    const mid=start+slice/2;
+    ctx.rotate(mid);
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle="#222";
+    ctx.font = i===5 ? '700 38px "Schoolbell","Comic Sans MS",cursive'
+                     : '700 100px "Schoolbell","Comic Sans MS",cursive';
+    ctx.fillText(items[i], r*0.61, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+draw();
+
+function easeOut(t){ return 1-Math.pow(1-t,4); }
+
+spinBtn.addEventListener("click",()=>{
+  if(spinning) return;
+  spinning=true; spinBtn.disabled=true; result.textContent="";
+
+  const winner=Math.floor(Math.random()*n);
+  // El centro del sector ganador debe acabar bajo la flecha superior.
+  const targetCenter=winner*slice + slice/2;
+  const currentMod=((rotation%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+  const desired=(2*Math.PI-targetCenter)%(2*Math.PI);
+  let delta=(desired-currentMod+2*Math.PI)%(2*Math.PI);
+  delta += (5+Math.floor(Math.random()*3))*2*Math.PI;
+
+  const start=rotation, end=rotation+delta, duration=3800+Math.random()*900;
+  const t0=performance.now();
+
+  function animate(now){
+    const p=Math.min(1,(now-t0)/duration);
+    rotation=start+(end-start)*easeOut(p);
+    draw();
+    if(p<1) requestAnimationFrame(animate);
+    else{
+      spinning=false; spinBtn.disabled=false;
+      const label=items[winner];
+      result.textContent = label==="elige tú" ? "¡Elige tú!" : "¡Ha salido la "+label+"!";
+    }
+  }
+  requestAnimationFrame(animate);
+});
+</script>
+</body>
+</html>
